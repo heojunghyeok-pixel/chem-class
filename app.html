@@ -5,87 +5,191 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>농도와 반응 속도 분석</title>
 <!--
-  4단원 2-01 농도와 반응 속도 (아이오딘 시계 반응) 분석 도구
-  - 인터넷 없이 동작합니다. (사진에서 숫자 읽기만 인터넷이 필요합니다.)
-  - 입력한 값은 이 기기의 브라우저에 저장됩니다.
+  4단원 2-01 농도와 반응 속도 (아이오딘 시계 반응) 분석 프로그램
+  - 학생 : 조원 입력 → 실험 결과(표·사진) → 그래프와 예측 → 제출
+  - 교사 : 제출 현황(조별 사진·데이터·그래프) / 전체 그래프 / 목표 시간(큰 화면) / 설정
+  - 제출 내용 공유 : 구글 Apps Script 웹 앱으로 열면 교사의 구글 시트·드라이브에 저장됩니다.
+    (연결 전에는 이 기기 안에만 저장됩니다.)  설정 방법 : 같은 폴더의 '분석프로그램_구글연결_안내.md'
 -->
+<!-- 글꼴 : Pretendard (인터넷이 없으면 맑은 고딕으로 표시됩니다) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 :root{
-  --board:#3B5249;--paper:#FFFCF4;--line:#2A2A27;--title:#2F4A3E;--ink:#1E1E1C;--muted:#66635B;
-  --ans:#E8542C;--red:#C81E1E;--blue:#2F4B8A;--sage:#E2EAE5;--beige:#F2EFE6;--tape:#FBE77A;
-  --font:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+  --bg:#F3F2EE;--surface:#FFFFFF;--sub:#F8F7F4;--line:#E3E0D8;--line2:#CFCBC0;--row:#EFEDE7;
+  --ink:#1D2320;--ink2:#474D49;--muted:#7B7F79;
+  --brand:#24533F;--brand-d:#1A4031;--brand-l:#EAF1EC;
+  --accent:#CF5530;--accent-d:#B5461F;
+  --warn:#B23A22;--ok:#1F6B48;--mark:#FFF5D6;
+  --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{background:var(--board);color:var(--ink);font-family:var(--font);word-break:keep-all}
-body{min-height:100vh;padding:16px}
-.wrap{max-width:1180px;margin:0 auto}
-header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;color:#F1EEE4;margin-bottom:14px}
-header h1{font-size:26px;font-weight:800}
-header .sub{font-size:15px;opacity:.8}
-.teamsel{margin-left:auto;font-weight:700;font-size:18px}
-.teamsel select{font:700 20px var(--font);padding:6px 12px;border-radius:10px;border:2px solid var(--line);background:var(--tape)}
-nav{display:flex;gap:6px}
-nav button{font:800 19px var(--font);padding:12px 24px;border-radius:12px 12px 0 0;border:3px solid var(--line);border-bottom:0;background:#D8D3C2;color:var(--title);cursor:pointer}
-nav button.on{background:var(--paper);color:var(--ink)}
-.page{display:none;background:var(--paper);border:3px solid var(--line);border-radius:0 12px 12px 12px;padding:24px}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--ink)}
+body{min-height:100vh;font:15px/1.5 var(--font);letter-spacing:-.011em;word-break:keep-all;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit;letter-spacing:inherit;color:inherit}
+input[type=number],table,.eq,.out,.summary,.stage,.tcard .feq{font-variant-numeric:tabular-nums}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+
+/* 상단 막대 */
+.top{background:var(--surface);border-bottom:1px solid var(--line)}
+.topin{display:flex;align-items:center;gap:14px;min-height:68px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}
+.mark{width:36px;height:36px;border-radius:9px;background:var(--brand);display:grid;place-items:center;flex:none}
+.top h1{font-size:17px;font-weight:700;letter-spacing:-.025em;line-height:1.3}
+.top .sub{font-size:13px;color:var(--muted)}
+.status{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:#BDB9AE;flex:none}
+.dot.gas,.dot.url{background:#2E9C67;box-shadow:0 0 0 3px rgba(46,156,103,.15)}
+.clsSel{font-size:14px;font-weight:700;padding:7px 34px 7px 12px;margin-left:6px;color:var(--ink)}
+.clsSel.need{border-color:var(--accent);background-color:#FDF1EC;color:var(--accent-d)}
+.notice{display:flex;align-items:center;gap:10px;background:#FDF1EC;color:var(--accent-d);border-radius:8px;padding:11px 14px;font-size:14px;font-weight:600;margin-bottom:18px}
+.mode{display:flex;background:#EDEBE5;border-radius:9px;padding:3px}
+.mode button{font-size:14px;font-weight:600;padding:7px 18px;border:0;background:transparent;color:var(--muted);border-radius:7px;cursor:pointer}
+.mode button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08),0 0 0 1px rgba(0,0,0,.04)}
+
+/* 단계 탭 */
+nav{display:none;gap:28px;border-bottom:1px solid var(--line);margin:20px 0 20px;overflow-x:auto}
+nav.on{display:flex}
+nav button{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 2px 12px;cursor:pointer;white-space:nowrap}
+nav button:hover{color:var(--ink2)}
+nav button .n{width:20px;height:20px;border-radius:50%;background:#E4E2DB;color:var(--ink2);font-size:11.5px;font-weight:700;display:grid;place-items:center}
+nav button.on{color:var(--ink);border-bottom-color:var(--brand)}
+nav button.on .n{background:var(--brand);color:#fff}
+
+.page{display:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:26px 28px;margin-bottom:48px}
 .page.on{display:block}
-h2{font-size:21px;font-weight:800;color:var(--title);margin-bottom:10px}
-.help{font-size:15px;color:var(--muted);line-height:1.55;margin-bottom:10px}
-.cols{display:grid;grid-template-columns:1.3fr 1fr;gap:24px}
-@media (max-width:900px){.cols{grid-template-columns:1fr}}
-table.dt{border-collapse:collapse;width:100%;background:#fff;font-size:18px}
-table.dt th{background:#2F5D4E;color:#fff;font-weight:700;padding:9px 6px;border:1px solid #C9CEC9;font-size:15px;line-height:1.3}
-table.dt td{border:1px solid #D7D3C6;padding:5px;text-align:center}
-table.dt td.c{background:#F6F4EC;color:var(--muted)}
-table.dt input{width:100%;max-width:120px;font:700 19px var(--font);text-align:center;border:2px solid #D3CDBC;border-radius:8px;padding:6px 4px;background:#FFFDF6}
-table.dt input:focus{outline:none;border-color:var(--ans);background:#fff}
-.del{border:0;background:none;color:#A9A497;font-size:18px;cursor:pointer}
-.btns{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
-button.b{font:700 16px var(--font);padding:9px 16px;border-radius:10px;border:2px solid var(--line);background:#fff;cursor:pointer}
-button.b:hover{background:var(--beige)}
-button.b.main{background:var(--title);color:#fff;border-color:var(--title)}
-.photo{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:200px;border:3px dashed #D3CDBC;border-radius:12px;background:#FFFDF6;color:#9C978A;text-align:center;padding:12px;cursor:pointer}
-.photo img{max-width:100%;max-height:380px;border-radius:8px}
-textarea{width:100%;min-height:90px;font:15px/1.5 Consolas,monospace;border:2px solid #D3CDBC;border-radius:10px;padding:8px;background:#FFFDF6}
-details{margin-top:18px;font-size:15px;color:var(--muted)}
-details summary{cursor:pointer;font-weight:700}
-.set{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:10px}
-.set input,.set select{font:700 15px var(--font);width:80px;padding:4px;border:2px solid #C9CEC9;border-radius:8px;text-align:center}
-.set select{width:auto}
-canvas{width:100%;background:#fff;border:2px solid #E3DED0;border-radius:12px;display:block}
-.eq{font:800 26px var(--font);text-align:center;background:var(--beige);border-radius:12px;padding:14px;margin:12px 0 0}
-.eq small{display:block;font-size:16px;font-weight:500;color:var(--muted);margin-top:6px}
-.box{background:#fff;border:2px solid #E3DED0;border-radius:12px;padding:18px;margin-bottom:16px}
-.inrow{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:700;flex-wrap:wrap}
-.inrow input{font:800 26px var(--font);width:140px;text-align:center;padding:8px;border:3px solid var(--line);border-radius:12px}
-.out{margin-top:12px;font-size:19px;line-height:1.7;background:var(--sage);border-radius:10px;padding:12px 14px}
-.out b.hl{color:var(--ans);font-size:26px}
-.warn{color:var(--red);font-size:15px;font-weight:700}
-.target{font:800 110px/1 var(--font);text-align:center;color:var(--ans)}
-.target small{font-size:36px;color:var(--ink)}
-.watch{font:800 66px/1 Consolas,var(--font);text-align:center;color:var(--title);margin:8px 0}
-.mini{font:700 16px var(--font);width:80px;padding:5px;border:2px solid var(--line);border-radius:8px;text-align:center}
-tr.first td{background:#FFF1C7!important;font-weight:800}
-.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none}
-.toast.on{opacity:1}
+h2{font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px}
+.sec{margin-top:28px}
+.help{font-size:13.5px;color:var(--muted);line-height:1.6;margin-bottom:12px}
+.cols{display:grid;grid-template-columns:1.3fr 1fr;gap:36px}
+.cols>*{min-width:0}
+@media (max-width:900px){.cols{grid-template-columns:1fr !important}.page{padding:20px 16px}.wrap{padding:0 14px}}
+@media (max-width:640px){.status{order:5;width:100%;margin-left:0}.mode{margin-left:auto}table.dt{font-size:13.5px}table.dt th{font-size:11.5px;padding:8px 3px}table.dt td{padding:6px 3px}table.dt input{font-size:15px;padding:6px 2px}nav{gap:18px}}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px}
+
+/* 표 */
+table.dt{border-collapse:separate;border-spacing:0;width:100%;background:#fff;font-size:15px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+table.dt th{background:var(--sub);color:var(--ink2);font-weight:600;font-size:12.5px;line-height:1.35;padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.dt td{border-bottom:1px solid var(--row);padding:7px 6px;text-align:center}
+table.dt tbody tr:last-child td{border-bottom:0}
+table.dt td:first-child{color:var(--muted);font-size:14px}
+table.dt td:first-child b{font-weight:600}
+table.dt td.c{color:var(--ink2)}
+table.dt input{width:100%;max-width:110px;font-size:16px;font-weight:600;text-align:center;border:1px solid var(--line2);border-radius:7px;padding:7px 4px;background:#fff}
+input:focus,select:focus,textarea:focus,.field:focus{outline:none;border-color:var(--brand)!important;box-shadow:0 0 0 3px rgba(36,83,63,.14)}
+input::placeholder{color:#AAA79E}
+.del{border:0;background:none;color:#B6B2A7;font-size:15px;width:28px;height:28px;border-radius:6px;cursor:pointer}
+.del:hover{background:#F6EDEA;color:var(--warn)}
+
+/* 버튼 */
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0;align-items:center}
+button.b{font-size:14px;font-weight:600;padding:9px 15px;border-radius:8px;border:1px solid var(--line2);background:#fff;color:var(--ink);cursor:pointer;transition:background .15s,border-color .15s}
+button.b:hover{background:#F5F4F0;border-color:#BDB8AC}
+button.b.main{background:var(--brand);color:#fff;border-color:var(--brand)}
+button.b.main:hover{background:var(--brand-d);border-color:var(--brand-d)}
+button.b.hot{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.b.hot:hover{background:var(--accent-d);border-color:var(--accent-d)}
+button.b:disabled{opacity:.5;cursor:default}
+.btns .sp{flex:1}
+
+/* 입력 */
+.field{font-size:15px;font-weight:500;padding:9px 12px;border:1px solid var(--line2);border-radius:8px;background:#fff;width:100%}
+.members{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.teamrow{display:flex;align-items:center;gap:12px;font-size:15px;font-weight:600;color:var(--ink2);margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--row)}
+select{appearance:none;-webkit-appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23474D49' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center;border:1px solid var(--line2);border-radius:8px;cursor:pointer}
+.teamrow select{font-size:16px;font-weight:700;color:var(--ink);padding:8px 38px 8px 14px}
+.photo{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:230px;border:1.5px dashed var(--line2);border-radius:10px;background:var(--sub);color:var(--muted);font-size:14px;text-align:center;padding:16px;cursor:pointer;transition:border-color .15s,background .15s}
+.photo:hover{border-color:var(--brand);background:#F4F7F5}
+.photo svg{color:#9C9A92}
+.photo img{max-width:100%;max-height:380px;border-radius:6px}
+textarea{width:100%;min-height:96px;font:14px/1.6 "D2Coding",Consolas,monospace;border:1px solid var(--line2);border-radius:8px;padding:10px 12px;background:#fff}
+details{margin-top:18px;font-size:13.5px;color:var(--muted)}
+details summary{cursor:pointer;font-weight:600;list-style-position:inside}
+details summary:hover{color:var(--ink2)}
+.set{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:12px;padding:14px 16px;background:var(--sub);border-radius:8px;color:var(--ink2)}
+.set label{display:flex;align-items:center;gap:6px}
+.set input,.set select{font-size:14px;font-weight:600;width:84px;padding:5px 6px;border:1px solid var(--line2);border-radius:6px;text-align:center;background-color:#fff}
+.set select{width:auto;padding-right:30px;background-position:right 9px center}
+
+/* 그래프 · 결과 */
+canvas{width:100%;background:#fff;border:1px solid var(--line);border-radius:10px;display:block}
+.eq{font-size:18px;font-weight:700;text-align:center;background:var(--sub);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:12px;letter-spacing:-.005em}
+.eq small{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-top:4px}
+.inrow{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;color:var(--ink2);flex-wrap:wrap}
+.inrow input{font-size:22px;font-weight:700;width:130px;text-align:center;padding:8px;border:1px solid var(--line2);border-radius:8px;color:var(--ink)}
+.out{margin-top:14px;font-size:15px;line-height:1.75;background:var(--brand-l);border-radius:8px;padding:14px 16px;color:var(--ink)}
+.out b.hl{color:var(--accent-d);font-size:22px;font-weight:700}
+#order{font-size:14px;color:var(--ink2);padding:0 4px}
+.warn{color:var(--warn);font-size:13.5px;font-weight:600}
+.ok{color:var(--ok);font-weight:700}
+.summary{display:grid;grid-template-columns:76px 1fr;gap:0;font-size:15px}
+.summary>*{padding:11px 0;border-bottom:1px solid var(--row)}
+.summary b{color:var(--muted);font-weight:500;font-size:14px}
+
+/* 교사 : 제출 현황 */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:1000px){.cards{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.cards{grid-template-columns:1fr}}
+.tcard{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 14px 12px;transition:border-color .15s,box-shadow .15s}
+.tcard.done{cursor:pointer}
+.tcard.done:hover{border-color:#BDB8AC;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.tcard h3{font-size:16px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.tcard h3 span:first-child{display:flex;align-items:center;gap:8px}
+.sw{display:inline-block;width:9px;height:9px;border-radius:50%}
+.tcard .tag{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:#EFEDE7;color:var(--muted)}
+.tcard.done .tag{background:var(--brand-l);color:var(--brand)}
+.tcard .mem{font-size:13px;color:var(--muted);margin:4px 0 10px;min-height:20px}
+.tcard canvas{border:0;border-radius:6px;background:var(--sub)}
+.tcard .feq{font-size:13px;font-weight:600;color:var(--ink2);margin-top:8px}
+.modal{position:fixed;inset:0;background:rgba(22,27,24,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.modal.on{display:flex}
+.modal .in{background:#fff;border-radius:14px;max-width:1100px;width:100%;max-height:92vh;overflow:auto;padding:24px 26px;box-shadow:0 24px 60px rgba(0,0,0,.22)}
+.dlg{background:#fff;border-radius:14px;padding:24px;width:340px;max-width:100%;box-shadow:0 24px 60px rgba(0,0,0,.22)}
+.dlg .field{font-size:20px;font-weight:600;letter-spacing:.2em;text-align:center;margin-top:6px}
+.dlg .btns{justify-content:flex-end;margin-bottom:0}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:12px;font-size:14px;font-weight:600;color:var(--ink2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:0}
+/* 교사 : 목표 시간 큰 화면 */
+.stage{background:#16221C;border-radius:12px;padding:44px 30px 40px;text-align:center;color:#ECEAE3}
+.stage .lab{font-size:17px;font-weight:600;letter-spacing:.06em;color:#9FAEA6}
+.stage .big{font-weight:800;font-size:clamp(120px,21vw,290px);line-height:1;color:#F3D26B;letter-spacing:-.035em;margin-top:6px}
+.stage .big small{font-size:.24em;font-weight:600;color:#C9D0CC;letter-spacing:0;margin-left:.15em}
+.stage .watch{font-weight:600;font-size:clamp(56px,8vw,112px);line-height:1;margin-top:22px;padding-top:24px;border-top:1px solid rgba(255,255,255,.1);display:inline-block;min-width:4.5em;font-variant-numeric:tabular-nums}
+.stage:fullscreen{display:flex;flex-direction:column;justify-content:center;align-items:center;border-radius:0}
+.stage:fullscreen .lab{font-size:clamp(24px,3.2vh,44px)}
+.stage:fullscreen .big{font-size:min(44vh,40vw)}
+.stage:fullscreen .watch{font-size:min(18vh,16vw);margin-top:3vh;padding-top:4vh}
+.bigin{font-size:28px;font-weight:700;width:150px;text-align:center;padding:8px;border:1px solid var(--line2);border-radius:10px}
+.mini{font-size:14px;font-weight:600;width:64px;padding:5px;border:1px solid var(--line2);border-radius:6px;text-align:center}
+tr.first td{background:var(--mark)!important;font-weight:700}
+.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,8px);background:#1D2320;color:#fff;padding:11px 18px;border-radius:9px;font-size:14px;font-weight:600;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
 </style>
 </head>
 <body>
+<header class="top"><div class="wrap topin">
+  <div class="mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6.2l-4.7 8.4A2 2 0 0 0 7 20.6h10a2 2 0 0 0 1.7-3L14 9.2V3"/><path d="M7.6 15h8.8"/></svg></div>
+  <div><h1>농도와 반응 속도 분석</h1><div class="sub">아이오딘 시계 반응 · 4단원 2-01</div></div>
+  <select id="cls" class="clsSel" title="수업 반"></select>
+  <div class="status" id="conn"></div>
+  <div class="mode"><button id="mStu" class="on">학생</button><button id="mTea">교사</button></div>
+</div></header>
 <div class="wrap">
-<header>
-  <div><h1>농도와 반응 속도 분석</h1><div class="sub">4단원 2-01 · 아이오딘 시계 반응</div></div>
-  <div class="teamsel">조 <select id="team"></select></div>
-</header>
-<nav>
-  <button data-p="p1" class="on">① 실험 결과</button>
-  <button data-p="p2">② 그래프와 예측</button>
-  <button data-p="p3">③ 타이머 맞추기</button>
+
+<!-- ================= 학생 ================= -->
+<nav id="navS" class="on">
+  <button data-p="s1" class="on"><span class="n">1</span>실험 결과</button>
+  <button data-p="s2"><span class="n">2</span>그래프와 예측</button>
+  <button data-p="s3"><span class="n">3</span>제출하기</button>
 </nav>
 
-<section class="page on" id="p1">
+<section class="page on" id="s1">
+  <div class="notice" id="clsNote">먼저 화면 위쪽의 ‘반 선택’에서 우리 반을 고르세요.</div>
   <div class="cols">
     <div>
-      <h2>실험 결과 입력</h2>
+      <div class="teamrow">우리 조 <select id="team"></select></div>
+      <h2>조원 이름</h2>
+      <div class="members" id="members"></div>
+      <h2 class="sec">실험 결과</h2>
       <p class="help">원액 부피와 걸린 시간만 넣으면 나머지는 자동으로 계산됩니다.</p>
       <table class="dt" id="tbl">
         <thead><tr><th>홈</th><th><span class="vn">KIO₃</span> 원액<br>(mL)</th><th>증류수<br>(mL)</th><th>섞은 뒤 농도<br>(M)</th><th>걸린 시간<br>(s)</th><th>반응 속도<br>1/t (s⁻¹)</th><th></th></tr></thead>
@@ -95,8 +199,8 @@ tr.first td{background:#FFF1C7!important;font-weight:800}
         <button class="b" id="addRow">줄 추가</button>
         <button class="b" id="sample">예시 값</button>
         <button class="b" id="clear">지우기</button>
-        <button class="b" id="csv">엑셀로 저장</button>
-        <button class="b main" id="next">그래프 보기</button>
+        <span class="sp"></span>
+        <button class="b main" id="toGraph">그래프 보기 →</button>
       </div>
       <details>
         <summary>실험 조건 바꾸기 (선생님용)</summary>
@@ -109,10 +213,10 @@ tr.first td{background:#FFF1C7!important;font-weight:800}
       </details>
     </div>
     <div>
-      <h2>사진으로 올리기</h2>
-      <p class="help">결과 표를 찍어 올리면 옆에 두고 보면서 입력할 수 있습니다.</p>
+      <h2>기록한 표 사진</h2>
+      <p class="help">활동지 결과 표를 찍어 올리세요. 제출할 때 선생님께 함께 보내집니다.</p>
       <label class="photo" id="drop">
-        <span id="phText">눌러서 사진 찍기 또는 이미지 선택</span>
+        <span id="phText"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 8px"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.4-2h6.2l1.4 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.4"/></svg>눌러서 사진 찍기 또는 이미지 선택<br><span style="font-size:12.5px;color:#A3A097">끌어다 놓거나 붙여 넣어도 됩니다</span></span>
         <img id="ph" alt="" hidden>
         <input type="file" id="file" accept="image/*" capture="environment" hidden>
       </label>
@@ -127,7 +231,7 @@ tr.first td{background:#FFF1C7!important;font-weight:800}
   </div>
 </section>
 
-<section class="page" id="p2">
+<section class="page" id="s2">
   <div class="cols">
     <div>
       <h2>농도와 반응 속도</h2>
@@ -137,6 +241,7 @@ tr.first td{background:#FFF1C7!important;font-weight:800}
     <div>
       <div class="box">
         <h2>목표 시간에 맞는 용액</h2>
+        <p class="help">선생님이 발표한 목표 시간을 넣으세요.</p>
         <div class="inrow">목표 시간 <input id="inT" type="number" step="0.1"> 초</div>
         <div class="out" id="outT">목표 시간을 넣어 보세요.</div>
       </div>
@@ -150,92 +255,251 @@ tr.first td{background:#FFF1C7!important;font-weight:800}
   </div>
 </section>
 
-<section class="page" id="p3">
-  <div class="cols" style="grid-template-columns:1fr 1.2fr">
+<section class="page" id="s3">
+  <div class="cols">
     <div class="box">
-      <h2>목표 시간</h2>
-      <div class="target" id="tgt">--<small> 초</small></div>
-      <div class="btns" style="justify-content:center;align-items:center">
-        <button class="b main" id="rand">무작위로 정하기</button>
-        <span>직접 <input class="mini" id="tgtIn" type="number" step="0.1"> 초</span>
-      </div>
-      <p class="help" style="text-align:center">무작위 범위 <input class="mini" id="rMin" type="number" value="20" style="width:60px"> ~ <input class="mini" id="rMax" type="number" value="40" style="width:60px"> 초</p>
-      <h2 style="margin-top:14px">초시계</h2>
-      <div class="watch" id="watch">00.00</div>
-      <div class="btns" style="justify-content:center">
-        <button class="b main" id="wGo" style="font-size:20px;padding:12px 26px">시작 / 멈춤</button>
-        <button class="b" id="wReset">처음으로</button>
-        <button class="b" id="wSend">우리 조 기록에 넣기</button>
-      </div>
+      <h2>제출할 내용 확인</h2>
+      <div class="summary" id="sum"></div>
+      <div class="btns" style="margin-top:18px"><button class="b hot" id="submit" style="font-size:15px;padding:12px 26px">선생님께 제출하기</button></div>
+      <p class="help" id="subMsg"></p>
     </div>
     <div class="box">
-      <h2>조별 기록</h2>
-      <table class="dt" id="board">
-        <thead><tr><th>조</th><th><span class="vn">KIO₃</span> 원액 (mL)</th><th>실제 시간 (s)</th><th>오차 (s)</th><th>순위</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <div class="btns"><button class="b" id="clearBoard">기록 지우기</button></div>
+      <h2>사진</h2>
+      <img id="sumPh" alt="" style="max-width:100%;border-radius:6px;margin-top:6px" hidden>
+      <div class="photo" id="sumPhNone" style="cursor:default;min-height:260px;margin-top:6px">아직 사진이 없습니다.<br>‘실험 결과’ 단계에서 올려 주세요.</div>
     </div>
   </div>
 </section>
+
+<!-- ================= 교사 ================= -->
+<nav id="navT">
+  <button data-p="t1" class="on"><span class="n">1</span>제출 현황</button>
+  <button data-p="t2"><span class="n">2</span>전체 그래프</button>
+  <button data-p="t3"><span class="n">3</span>목표 시간</button>
+  <button data-p="t4"><span class="n">4</span>설정</button>
+</nav>
+
+<section class="page" id="t1">
+  <div class="btns" style="margin-top:0;margin-bottom:18px"><h2 style="margin:0"><span class="clsT"></span>조별 제출 현황</h2><span class="sp"></span><span class="help" id="lastLoad" style="margin:0"></span><button class="b" id="refresh">새로 고침</button></div>
+  <div class="cards" id="cards"></div>
+  <p class="help" style="margin-top:12px">조 카드를 누르면 제출한 사진, 데이터, 그래프를 크게 볼 수 있습니다. 같은 조가 여러 번 제출하면 마지막 제출이 보입니다.</p>
+</section>
+
+<section class="page" id="t2">
+  <h2 style="margin-bottom:14px"><span class="clsT"></span>조별 그래프 함께 보기</h2>
+  <canvas id="cvAll" width="1200" height="640"></canvas>
+  <div class="legend" id="legend"></div>
+  <div style="margin-top:22px">
+    <table class="dt" id="cmp"><thead><tr><th>조</th><th>관계식</th><th>R²</th><th id="cmpH">목표 시간에 필요한 원액 (mL)</th></tr></thead><tbody></tbody></table>
+  </div>
+</section>
+
+<section class="page" id="t3">
+  <div class="stage" id="stage">
+    <div class="lab"><span class="clsT"></span>목표 시간</div>
+    <div class="big" id="bigT">--<small> 초</small></div>
+    <div class="watch" id="watch">00.00</div>
+  </div>
+  <div class="btns" style="justify-content:center;margin-top:20px;gap:10px">
+    <input class="bigin" id="tgtIn" type="number" step="1" placeholder="초">
+    <button class="b main" id="setT" style="font-size:15px;padding:12px 20px">이 시간으로</button>
+    <button class="b" id="rand" style="font-size:15px;padding:12px 20px">무작위</button>
+    <span class="help" style="margin:0 0 0 6px">범위 <input class="mini" id="rMin" type="number" value="30"> ~ <input class="mini" id="rMax" type="number" value="80"> 초</span>
+  </div>
+  <div class="btns" style="justify-content:center;gap:10px">
+    <button class="b hot" id="wCount" style="font-size:15px;padding:12px 24px">3, 2, 1 시작</button>
+    <button class="b main" id="wGo" style="font-size:15px;padding:12px 24px">시작 / 멈춤</button>
+    <button class="b" id="wReset" style="padding:12px 16px">처음으로</button>
+    <button class="b" id="full" style="padding:12px 16px">큰 화면으로</button>
+  </div>
+  <div class="box" style="max-width:820px;margin:20px auto 0">
+    <h2>조별 결과</h2>
+    <table class="dt" id="board">
+      <thead><tr><th>조</th><th><span class="vn">KIO₃</span> 원액 (mL)</th><th>실제 시간 (s)</th><th>목표와 차이 (s)</th><th>순위</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="btns"><button class="b" id="clearBoard">결과 지우기</button></div>
+    <p class="help">무작위 범위는 학생들이 측정한 시간 범위 안에서 정해야 계산이 잘 맞습니다.</p>
+  </div>
+</section>
+
+<section class="page" id="t4">
+  <div class="box">
+    <h2>제출 내용 저장 위치</h2>
+    <p class="help" id="connDetail"></p>
+    <div class="btns"><input class="field" id="srv" placeholder="구글 Apps Script 웹 앱 주소 (https://script.google.com/macros/s/…/exec)" style="max-width:720px"></div>
+    <div class="btns"><button class="b main" id="srvSave">저장</button><button class="b" id="srvTest">연결 확인</button><button class="b" id="srvLink">학생용 주소 복사</button></div>
+    <p class="help">구글 Apps Script 웹 앱으로 이 프로그램을 직접 열고 있다면 주소를 넣지 않아도 됩니다. 자세한 방법은 '분석프로그램_구글연결_안내.md'를 보세요.</p>
+  </div>
+  <div class="box">
+    <h2>반 목록</h2>
+    <div class="btns"><input class="field" id="clsList" placeholder="G, H, I, J" style="max-width:260px"><button class="b" id="clsSave">저장</button></div>
+    <p class="help">쉼표로 구분해 넣으세요. 반을 고르면 조원·측정값·목표 시간 결과가 반마다 따로 저장되고, 제출 현황에는 고른 반의 제출만 보입니다. ‘학생용 주소 복사’를 누르면 지금 고른 반이 들어간 주소가 복사됩니다.</p>
+  </div>
+  <div class="box">
+    <h2>교사 탭 비밀번호</h2>
+    <div class="btns"><input class="field" id="pin" type="password" placeholder="새 비밀번호 (숫자)" style="max-width:260px"><button class="b" id="pinSave">바꾸기</button></div>
+    <p class="help">처음 비밀번호는 1234입니다. 이 기기에만 적용됩니다.</p>
+  </div>
+  <div class="box">
+    <h2>이 기기에 저장된 제출 기록</h2>
+    <div class="btns"><button class="b" id="localClear">이 기기의 제출 기록 지우기</button></div>
+  </div>
+</section>
+
+<div class="modal" id="modal"><div class="in" id="modalIn"></div></div>
+<div class="modal" id="pinModal"><form class="dlg" id="pinForm" autocomplete="off">
+  <h2>교사 화면</h2>
+  <p class="help" style="margin-bottom:10px">비밀번호를 입력하세요.</p>
+  <input class="field" id="pinIn" type="password" inputmode="numeric">
+  <p class="warn" id="pinErr" style="min-height:22px;margin-top:8px"></p>
+  <div class="btns"><button class="b" type="button" id="pinCancel">취소</button><button class="b main" type="submit">확인</button></div>
+</form></div>
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
 'use strict';
-var TEAMS = 8, KEY = 'conc-rate-v2';
+var TEAMS = 6, KEY = 'conc-rate-v4';
 var $ = function(id){ return document.getElementById(id); };
-var DEF_V = [1.0, 1.5, 2.0, 2.5];
+var DEF_V = [0.5, 1.0, 1.5, 2.0, 2.5];
+var COLORS = ['#D0533A','#2F5EA8','#2E8A5E','#C68A14','#7D4FA6','#14808A'];
+var MINE = '#24533F', PICK = '#CF5530';
+var CF = '"Pretendard Variable",Pretendard,"Malgun Gothic",sans-serif';
 function blank(){ return DEF_V.map(function(v){ return {v:v, t:''}; }); }
 var S = (function(){
   var d = null; try{ d = JSON.parse(localStorage.getItem(KEY)); }catch(e){}
   d = d || {};
   d.set = d.set || {name:'KIO₃', c0:0.05, vd:2.5, vm:5};
   d.teams = d.teams || {};
-  for(var i=1;i<=TEAMS;i++) if(!d.teams[i]) d.teams[i] = {rows: blank()};
-  d.team = d.team || 1; d.board = d.board || {}; d.target = (d.target===undefined) ? null : d.target;
+  for(var i=1;i<=TEAMS;i++){ if(!d.teams[i]) d.teams[i] = {rows: blank(), members:['','','','','']}; if(!d.teams[i].members) d.teams[i].members=['','','','','']; }
+  d.team = d.team || 1; d.board = d.board || {}; d.target = d.target || null;
+  d.srv = d.srv || ''; d.pin = d.pin || '1234'; d.local = d.local || [];
+  // 반 : 조원·측정값·목표 시간 결과를 반마다 따로 저장 (다음 반이 같은 기기를 써도 섞이지 않음)
+  d.classes = d.classes || ['G','H','I','J']; d.cls = d.cls || '';
+  d.byCls = d.byCls || {};
   return d;
 })();
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
-function toast(m){ var t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toast.h); toast.h=setTimeout(function(){t.classList.remove('on');},1800); }
+function bindCls(){
+  var k=S.cls||'_', c=S.byCls[k] || (S.byCls[k]={teams:{},board:{},target:null});
+  c.teams=c.teams||{}; c.board=c.board||{};
+  for(var i=1;i<=TEAMS;i++){ if(!c.teams[i]) c.teams[i]={rows:blank(), members:['','','','','']}; if(!c.teams[i].members) c.teams[i].members=['','','','','']; }
+  S.teams=c.teams; S.board=c.board; S.target=c.target===undefined?null:c.target;
+}
+try{
+  var qp = new URLSearchParams(location.search);
+  if(qp.get('s')) S.srv = qp.get('s');                                   // ?s=웹앱주소 → 저장 위치
+  var qc = (qp.get('c')||'').toUpperCase(); if(qc && S.classes.indexOf(qc)>=0) S.cls = qc;   // ?c=G → G반
+}catch(e){}
+bindCls();
+function save(){
+  var c=S.byCls[S.cls||'_']; c.teams=S.teams; c.board=S.board; c.target=S.target;
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
+}
+function clsName(){ return S.cls ? S.cls+'반' : ''; }
+function toast(m){ var t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toast.h); toast.h=setTimeout(function(){t.classList.remove('on');},2200); }
 function num(x){ var n=parseFloat(String(x).replace(',','.')); return isFinite(n)?n:null; }
-function sig(x){ if(x===null||!isFinite(x)) return '–'; var a=Math.abs(x); if(a>=100) return x.toFixed(1); if(a>=1) return x.toFixed(2); return x.toPrecision(3); }
+function sig(x){ if(x===null||x===undefined||!isFinite(x)) return '–'; var a=Math.abs(x); if(a>=100) return x.toFixed(1); if(a>=1) return x.toFixed(2); return x.toPrecision(3); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function conc(v){ return S.set.c0*v/S.set.vm; }
 function volOf(c){ return c*S.set.vm/S.set.c0; }
 
-/* tabs & team */
-var tsel=$('team');
-for(var i=1;i<=TEAMS;i++){ var o=document.createElement('option'); o.value=i; o.textContent=i+'조'; tsel.appendChild(o); }
-tsel.value=S.team; tsel.onchange=function(){ S.team=+tsel.value; save(); render(); };
+/* ---------- 저장 위치 (구글 Apps Script / 주소 / 이 기기) ---------- */
+var GAS = (typeof google!=='undefined' && google.script && google.script.run) ? google.script.run : null;
+var API = {
+  mode: function(){ return GAS ? 'gas' : (S.srv ? 'url' : 'local'); },
+  submit: function(d){
+    if(GAS) return new Promise(function(res,rej){ GAS.withSuccessHandler(res).withFailureHandler(rej).apiSubmit(d); });
+    if(S.srv) return fetch(S.srv,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(d)}).then(function(r){return r.json();});
+    d.time = new Date().toISOString(); d.photoData = d.photo; delete d.photo;
+    S.local.push(d); save(); return Promise.resolve({ok:true});
+  },
+  list: function(){
+    if(GAS) return new Promise(function(res,rej){ GAS.withSuccessHandler(res).withFailureHandler(rej).apiList(); });
+    if(S.srv) return fetch(S.srv+(S.srv.indexOf('?')<0?'?':'&')+'action=list').then(function(r){return r.json();});
+    return Promise.resolve({ok:true, list:S.local});
+  },
+  photo: function(item){
+    if(item.photoData) return Promise.resolve(item.photoData);
+    if(!item.photo) return Promise.resolve(null);
+    if(GAS) return new Promise(function(res,rej){ GAS.withSuccessHandler(function(r){res(r&&r.data);}).withFailureHandler(rej).apiPhoto(item.photo); });
+    if(S.srv) return fetch(S.srv+(S.srv.indexOf('?')<0?'?':'&')+'action=photo&id='+encodeURIComponent(item.photo)).then(function(r){return r.json();}).then(function(r){return r.data;});
+    return Promise.resolve(null);
+  }
+};
+function connText(){
+  var m=API.mode();
+  return m==='gas' ? '제출 내용은 선생님의 구글 시트에 저장됩니다.' :
+         m==='url' ? '제출 내용은 연결된 구글 시트에 저장됩니다.' :
+                     '구글 연결 전 : 제출 내용이 이 기기 안에만 저장됩니다.';
+}
+function renderConn(){ $('conn').innerHTML = '<i class="dot '+API.mode()+'"></i>'+esc(connText()); $('connDetail').textContent = connText(); $('srv').value = S.srv; }
+
+/* ---------- 모드 · 탭 ---------- */
+var mode = 'stu';
+function setMode(m){
+  mode = m;
+  $('mStu').classList.toggle('on', m==='stu'); $('mTea').classList.toggle('on', m==='tea');
+  $('navS').classList.toggle('on', m==='stu'); $('navT').classList.toggle('on', m==='tea');
+  show(m==='stu' ? curS : curT);
+}
+$('mStu').onclick = function(){ setMode('stu'); };
+$('mTea').onclick = function(){
+  if(mode==='tea') return;
+  $('pinIn').value=''; $('pinErr').textContent=''; $('pinModal').classList.add('on');
+  setTimeout(function(){ $('pinIn').focus(); },30);
+};
+function closePin(){ $('pinModal').classList.remove('on'); }
+$('pinForm').onsubmit=function(e){
+  e.preventDefault();
+  if($('pinIn').value!==S.pin){ $('pinErr').textContent='비밀번호가 맞지 않습니다.'; $('pinIn').select(); return; }
+  closePin(); setMode('tea'); loadSubs();
+};
+$('pinCancel').onclick=closePin;
+$('pinModal').onclick=function(e){ if(e.target===$('pinModal')) closePin(); };
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ closePin(); $('modal').classList.remove('on'); } });
+var curS='s1', curT='t1';
 function show(id){
+  if(id[0]==='s') curS=id; else curT=id;
   [].forEach.call(document.querySelectorAll('nav button'),function(b){ b.classList.toggle('on',b.dataset.p===id); });
   [].forEach.call(document.querySelectorAll('.page'),function(p){ p.classList.toggle('on',p.id===id); });
   render();
 }
 [].forEach.call(document.querySelectorAll('nav button'),function(b){ b.onclick=function(){ show(b.dataset.p); }; });
 
-/* settings */
+/* ---------- 학생 : 조 · 조원 ---------- */
+var tsel=$('team');
+for(var i=1;i<=TEAMS;i++){ var o=document.createElement('option'); o.value=i; o.textContent=i+'조'; tsel.appendChild(o); }
+tsel.value=S.team; tsel.onchange=function(){ S.team=+tsel.value; save(); render(); };
+function team(){ return S.teams[S.team]; }
+function renderMembers(){
+  var box=$('members'); box.innerHTML='';
+  team().members.forEach(function(m,i){
+    var inp=document.createElement('input'); inp.className='field'; inp.placeholder='조원 '+(i+1); inp.value=m;
+    inp.onchange=function(){ team().members[i]=inp.value.trim(); save(); };
+    box.appendChild(inp);
+  });
+}
+
+/* ---------- 실험 조건 ---------- */
 [['sName','name',0],['sC0','c0',1],['sVd','vd',1],['sVm','vm',1]].forEach(function(a){
   var el=$(a[0]); el.value=S.set[a[1]];
   el.onchange=function(){ S.set[a[1]] = a[2] ? (num(el.value)||0) : el.value; save(); render(); };
 });
 
-/* table */
-function rows(){ return S.teams[S.team].rows; }
-function pts(team){
-  var p=[]; (S.teams[team||S.team].rows).forEach(function(r){ var v=num(r.v),t=num(r.t); if(v>0&&t>0) p.push({v:v,c:conc(v),t:t,r:1/t}); });
-  return p;
-}
+/* ---------- 학생 : 표 ---------- */
+function rows(){ return team().rows; }
+function ptsOf(rs){ var p=[]; (rs||[]).forEach(function(r){ var v=num(r.v),t=num(r.t); if(v>0&&t>0) p.push({v:v,c:conc(v),t:t,r:1/t}); }); return p; }
 function renderTable(){
   var tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
   rows().forEach(function(r,i){
     var v=num(r.v),t=num(r.t),tr=document.createElement('tr');
     tr.innerHTML='<td><b>'+(i+1)+'</b></td>'+
-      '<td><input data-i="'+i+'" data-k="v" type="number" step="0.1" inputmode="decimal" value="'+r.v+'"></td>'+
+      '<td><input data-i="'+i+'" data-k="v" type="number" step="0.1" inputmode="decimal" value="'+esc(r.v)+'"></td>'+
       '<td class="c">'+(v===null?'–':(S.set.vd-v).toFixed(1))+'</td>'+
       '<td class="c">'+(v===null?'–':sig(conc(v)))+'</td>'+
-      '<td><input data-i="'+i+'" data-k="t" type="number" step="0.1" inputmode="decimal" value="'+r.t+'"></td>'+
+      '<td><input data-i="'+i+'" data-k="t" type="number" step="0.1" inputmode="decimal" value="'+esc(r.t)+'"></td>'+
       '<td class="c">'+(t?sig(1/t):'–')+'</td>'+
       '<td><button class="del" data-d="'+i+'" title="줄 지우기">✕</button></td>';
     tb.appendChild(tr);
@@ -245,25 +509,33 @@ function renderTable(){
   [].forEach.call(document.querySelectorAll('.vn'),function(e){ e.textContent=S.set.name; });
 }
 $('addRow').onclick=function(){ rows().push({v:'',t:''}); save(); renderTable(); };
-$('sample').onclick=function(){ S.teams[S.team].rows=[{v:1.0,t:44.0},{v:1.5,t:29.5},{v:2.0,t:22.3},{v:2.5,t:17.8}]; save(); renderTable(); };
-$('clear').onclick=function(){ if(confirm(S.team+'조 값을 지울까요?')){ S.teams[S.team].rows=blank(); save(); renderTable(); } };
-$('next').onclick=function(){ show('p2'); };
-$('csv').onclick=function(){
-  var L=['홈,'+S.set.name+' 원액(mL),증류수(mL),섞은 뒤 농도(M),걸린 시간(s),반응 속도(1/s)'];
-  rows().forEach(function(r,i){ var v=num(r.v),t=num(r.t); L.push([i+1,v===null?'':v,v===null?'':S.set.vd-v,v===null?'':conc(v),t===null?'':t,t?1/t:''].join(',')); });
-  var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['﻿'+L.join('\r\n')],{type:'text/csv'}));
-  a.download=S.team+'조_농도와반응속도.csv'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },400);
-};
+$('sample').onclick=function(){ team().rows=[{v:0.5,t:86.0},{v:1.0,t:44.0},{v:1.5,t:29.5},{v:2.0,t:22.3},{v:2.5,t:17.8}]; save(); renderTable(); };
+$('clear').onclick=function(){ if(confirm(S.team+'조 값을 지울까요?')){ team().rows=blank(); save(); renderTable(); } };
+$('toGraph').onclick=function(){ show('s2'); };
 
-/* photo + OCR */
-var img=null;
-function setPhoto(f){ if(!f||!/^image\//.test(f.type)) return; var rd=new FileReader(); rd.onload=function(){ img=rd.result; $('ph').src=img; $('ph').hidden=false; $('phText').hidden=true; }; rd.readAsDataURL(f); }
+/* ---------- 학생 : 사진 ---------- */
+var photos = {};            // 조별 사진 (이 화면에서만, 저장하지 않음)
+function setPhoto(f){
+  if(!f||!/^image\//.test(f.type)) return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var img=new Image();
+    img.onload=function(){            // 제출 용량을 줄이려고 긴 변 1280px로 줄임
+      var k=Math.min(1,1280/Math.max(img.width,img.height)), c=document.createElement('canvas');
+      c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      photos[S.team]=c.toDataURL('image/jpeg',0.75); renderPhoto();
+    };
+    img.src=rd.result;
+  };
+  rd.readAsDataURL(f);
+}
+function renderPhoto(){ var p=photos[S.team]; $('ph').hidden=!p; $('phText').hidden=!!p; if(p) $('ph').src=p; }
 $('file').onchange=function(){ setPhoto(this.files[0]); };
 $('drop').addEventListener('dragover',function(e){ e.preventDefault(); });
 $('drop').addEventListener('drop',function(e){ e.preventDefault(); setPhoto(e.dataTransfer.files[0]); });
 document.addEventListener('paste',function(e){ var it=(e.clipboardData||{}).items||[]; for(var i=0;i<it.length;i++) if(it[i].type.indexOf('image')===0) setPhoto(it[i].getAsFile()); });
 function guess(line){
-  // 한 줄에서 원액 부피(희석 후 부피 이하의 수)와 시간(가장 큰 수)을 고른다
   var n=(line.replace(/,/g,'.').match(/\d+(\.\d+)?/g)||[]).map(Number);
   if(n.length<2) return null;
   var t=Math.max.apply(null,n), start=(Number.isInteger(n[0])&&n.length>2)?1:0, v=null;
@@ -271,7 +543,7 @@ function guess(line){
   return v===null?null:{v:v,t:t};
 }
 $('ocr').onclick=function(){
-  if(!img){ toast('먼저 사진을 올려 주세요'); return; }
+  var img=photos[S.team]; if(!img){ toast('먼저 사진을 올려 주세요'); return; }
   $('ocrBox').hidden=false; $('ocrMsg').textContent='읽는 중입니다. 처음에는 10~20초 걸릴 수 있어요.';
   var go=function(){
     Tesseract.recognize(img,'eng',{tessedit_char_whitelist:'0123456789., '}).then(function(res){
@@ -288,10 +560,10 @@ $('ocr').onclick=function(){
 $('ocrApply').onclick=function(){
   var r=[]; $('ocrText').value.split(/\r?\n/).forEach(function(l){ var n=(l.match(/\d+(\.\d+)?/g)||[]).map(Number); if(n.length>=2) r.push({v:n[0],t:n[1]}); });
   if(!r.length){ toast('넣을 값이 없어요'); return; }
-  S.teams[S.team].rows=r; save(); renderTable(); toast('표에 넣었어요. 값을 확인하세요');
+  team().rows=r; save(); renderTable(); toast('표에 넣었어요. 값을 확인하세요');
 };
 
-/* regression: 1/t = a·c + b */
+/* ---------- 회귀 : 1/t = a·c + b ---------- */
 function fit(p){
   if(p.length<2) return null;
   var n=p.length,sx=0,sy=0,sxx=0,sxy=0;
@@ -305,35 +577,45 @@ function fit(p){
     cmin:Math.min.apply(null,p.map(function(q){return q.c;})), cmax:Math.max.apply(null,p.map(function(q){return q.c;})),
     time:function(c){ var r=a*c+b; return r>0?1/r:null; }, concFor:function(t){ return (1/t-b)/a; }};
 }
+function eqStr(F){ return '1/t = '+sig(F.a)+' × ['+S.set.name+'] '+(F.b>=0?'+ ':'− ')+sig(Math.abs(F.b)); }
 
-/* chart */
+/* ---------- 그래프 (여러 조 함께 그리기 가능) ---------- */
 function nice(hi,nt){ var span=hi||1,st=Math.pow(10,Math.floor(Math.log10(span/nt))),e=span/nt/st; st*=e>=7.5?10:e>=3.5?5:e>=1.5?2:1; return {hi:Math.ceil(hi/st)*st,st:st}; }
-function draw(p,F,mark){
-  var cv=$('cv'),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=100,R=24,T=24,B=78,pw=W-L-R,ph=H-T-B;
+function chart(cv, series, mark, small){
+  var x=cv.getContext('2d'),W=cv.width,H=cv.height,L=small?62:112,R=24,T=22,B=small?48:88,pw=W-L-R,ph=H-T-B;
   x.fillStyle='#fff'; x.fillRect(0,0,W,H);
-  var cm=Math.max(conc(S.set.vd), p.length?Math.max.apply(null,p.map(function(q){return q.c;})):0), rm=p.length?Math.max.apply(null,p.map(function(q){return q.r;})):0.05;
+  var cm=conc(S.set.vd), rm=0.02;
+  series.forEach(function(s){ s.p.forEach(function(q){ cm=Math.max(cm,q.c); rm=Math.max(rm,q.r); }); });
   if(mark) rm=Math.max(rm,mark[1]);
-  var xs=nice(cm*1.08,6), ys=nice(rm*1.15,6);
+  var xs=nice(cm*1.08,small?3:6), ys=nice(rm*1.15,small?3:6);
   var X=function(c){return L+c/xs.hi*pw;}, Y=function(r){return T+ph-r/ys.hi*ph;};
   var dx=Math.max(0,-Math.floor(Math.log10(xs.st))), dy=Math.max(0,-Math.floor(Math.log10(ys.st)));
-  x.font='600 18px Malgun Gothic,sans-serif'; x.strokeStyle='#E8E4D8'; x.lineWidth=1; x.fillStyle='#66635B';
-  for(var c=0;c<=xs.hi+1e-12;c+=xs.st){ x.beginPath(); x.moveTo(X(c),T); x.lineTo(X(c),T+ph); x.stroke(); x.textAlign='center'; x.fillText(c.toFixed(dx),X(c),T+ph+26); }
+  x.font=(small?'500 15px ':'500 19px ')+CF; x.strokeStyle='#EEECE6'; x.lineWidth=1; x.fillStyle='#8A877E';
+  for(var c=0;c<=xs.hi+1e-12;c+=xs.st){ x.beginPath(); x.moveTo(X(c),T); x.lineTo(X(c),T+ph); x.stroke(); x.textAlign='center'; x.fillText(c.toFixed(dx),X(c),T+ph+(small?20:30)); }
   for(var r=0;r<=ys.hi+1e-12;r+=ys.st){ x.beginPath(); x.moveTo(L,Y(r)); x.lineTo(L+pw,Y(r)); x.stroke(); x.textAlign='right'; x.fillText(r.toFixed(dy),L-10,Y(r)+6); }
-  x.strokeStyle='#1E1E1C'; x.lineWidth=2.5; x.beginPath(); x.moveTo(L,T); x.lineTo(L,T+ph); x.lineTo(L+pw,T+ph); x.stroke();
-  x.fillStyle='#1E1E1C'; x.font='700 19px Malgun Gothic,sans-serif'; x.textAlign='center';
-  x.fillText('섞은 뒤 ['+S.set.name+'] (M)',L+pw/2,H-16);
-  x.save(); x.translate(24,T+ph/2); x.rotate(-Math.PI/2); x.fillText('반응 속도 1/t (s⁻¹)',0,0); x.restore();
-  if(F){ var y0=F.b, y1=F.a*xs.hi+F.b; x.strokeStyle='#2F4B8A'; x.lineWidth=3; x.beginPath(); x.moveTo(X(0),Y(y0)); x.lineTo(X(xs.hi),Y(y1)); x.stroke(); }
-  p.forEach(function(q){ x.fillStyle='#C8372A'; x.beginPath(); x.arc(X(q.c),Y(q.r),8,0,7); x.fill(); });
-  if(mark){ x.strokeStyle='#E8542C'; x.setLineDash([6,6]); x.lineWidth=2; x.beginPath(); x.moveTo(X(mark[0]),T+ph); x.lineTo(X(mark[0]),Y(mark[1])); x.lineTo(L,Y(mark[1])); x.stroke(); x.setLineDash([]);
-    x.fillStyle='#E8542C'; x.beginPath(); x.arc(X(mark[0]),Y(mark[1]),9,0,7); x.fill(); }
+  x.strokeStyle='#A9A59A'; x.lineWidth=1.5; x.beginPath(); x.moveTo(L,T); x.lineTo(L,T+ph); x.lineTo(L+pw,T+ph); x.stroke();
+  if(!small){
+    x.fillStyle='#474D49'; x.font='600 20px '+CF; x.textAlign='center';
+    x.fillText('섞은 뒤 ['+S.set.name+'] (M)',L+pw/2,H-20);
+    x.save(); x.translate(28,T+ph/2); x.rotate(-Math.PI/2); x.fillText('반응 속도 1/t (s⁻¹)',0,0); x.restore();
+  }
+  x.save(); x.beginPath(); x.rect(L,T,pw,ph); x.clip();
+  series.forEach(function(s){
+    if(s.F){ x.strokeStyle=s.color; x.globalAlpha=.85; x.lineWidth=small?2:2.5; x.beginPath(); x.moveTo(X(0),Y(s.F.b)); x.lineTo(X(xs.hi),Y(s.F.a*xs.hi+s.F.b)); x.stroke(); x.globalAlpha=1; }
+  });
+  x.restore();
+  series.forEach(function(s){
+    s.p.forEach(function(q){ x.fillStyle=s.color; x.strokeStyle='#fff'; x.lineWidth=2; x.beginPath(); x.arc(X(q.c),Y(q.r),small?4.5:7,0,7); x.fill(); x.stroke(); });
+  });
+  if(mark){ x.strokeStyle=PICK; x.setLineDash([5,5]); x.lineWidth=1.5; x.beginPath(); x.moveTo(X(mark[0]),T+ph); x.lineTo(X(mark[0]),Y(mark[1])); x.lineTo(L,Y(mark[1])); x.stroke(); x.setLineDash([]);
+    x.fillStyle='#fff'; x.strokeStyle=PICK; x.lineWidth=3; x.beginPath(); x.arc(X(mark[0]),Y(mark[1]),8,0,7); x.fill(); x.stroke(); }
 }
+
+/* ---------- 학생 : 그래프와 예측 ---------- */
 function renderGraph(){
-  var p=pts(), F=fit(p), mark=null;
-  var T=num($('inT').value), V=num($('inV').value);
-  if(!F){ $('eq').innerHTML='값을 2개 이상 입력하세요'; $('outT').textContent=$('outV').textContent='먼저 ① 실험 결과를 입력하세요.'; $('order').textContent=''; draw(p,null,null); return; }
-  var X='['+S.set.name+']';
-  $('eq').innerHTML='1/t = '+sig(F.a)+' × '+X+' '+(F.b>=0?'+ ':'− ')+sig(Math.abs(F.b))+'<small>R² = '+F.r2.toFixed(3)+' (1에 가까울수록 측정값이 직선에 잘 맞는다)</small>';
+  var p=ptsOf(rows()), F=fit(p), mark=null, T=num($('inT').value), V=num($('inV').value);
+  if(!F){ $('eq').innerHTML='값을 2개 이상 입력하세요'; $('outT').textContent=$('outV').textContent='먼저 ‘실험 결과’ 단계에서 값을 입력하세요.'; $('order').textContent=''; chart($('cv'),[{p:p,F:null,color:MINE}]); return; }
+  $('eq').innerHTML=esc(eqStr(F))+'<small>R² = '+F.r2.toFixed(3)+' (1에 가까울수록 측정값이 직선에 잘 맞는다)</small>';
   if(T>0){
     var c=F.concFor(T), v=volOf(c);
     if(!(c>0)) $('outT').innerHTML='<span class="warn">이 시간은 만들 수 없어요. 다른 시간을 넣어 보세요.</span>';
@@ -346,42 +628,173 @@ function renderGraph(){
   if(V>0){ var t=F.time(conc(V)); $('outV').innerHTML='예상 시간 <b class="hl">'+(t===null?'계산할 수 없음':t.toFixed(1)+' 초')+'</b>'; if(!mark&&t) mark=[conc(V),1/t]; }
   else $('outV').textContent='원액 부피를 넣어 보세요.';
   $('order').innerHTML=F.order===null?'':'농도를 2배로 하면 반응 속도는 약 <b>'+Math.pow(2,F.order).toFixed(1)+'배</b>가 된다. (반응 차수 약 '+F.order.toFixed(1)+')';
-  draw(p,F,mark);
+  chart($('cv'),[{p:p,F:F,color:MINE}],mark);
 }
 $('inT').oninput=renderGraph; $('inV').oninput=renderGraph;
 
-/* timer game */
-function renderTarget(){ $('tgt').innerHTML=(S.target===null?'--':S.target.toFixed(1))+'<small> 초</small>'; }
-$('rand').onclick=function(){
-  var a=num($('rMin').value)||20,b=num($('rMax').value)||40,k=0;
-  var h=setInterval(function(){ S.target=Math.round((a+Math.random()*(b-a))*2)/2; renderTarget(); if(++k>=20){ clearInterval(h); save(); renderBoard(); } },60);
+/* ---------- 학생 : 제출 ---------- */
+function renderSummary(){
+  var p=ptsOf(rows()), F=fit(p), mem=team().members.filter(Boolean);
+  $('sum').innerHTML='<b>반</b><span>'+(S.cls?esc(clsName()):'<span class="warn">위쪽에서 반을 골라 주세요</span>')+'</span><b>조</b><span>'+S.team+'조</span><b>조원</b><span>'+(mem.length?esc(mem.join(', ')):'<span class="warn">조원 이름을 적어 주세요</span>')+'</span>'+
+    '<b>측정값</b><span>'+p.length+'개</span><b>관계식</b><span>'+(F?esc(eqStr(F))+' (R² '+F.r2.toFixed(3)+')':'<span class="warn">측정값이 2개 이상 필요해요</span>')+'</span>'+
+    '<b>사진</b><span>'+(photos[S.team]?'있음':'없음')+'</span><b>저장 위치</b><span>'+connText()+'</span>';
+  var ph=photos[S.team]; $('sumPh').hidden=!ph; $('sumPhNone').hidden=!!ph; if(ph) $('sumPh').src=ph;
+}
+$('submit').onclick=function(){
+  var p=ptsOf(rows()), F=fit(p), mem=team().members.filter(Boolean);
+  if(!S.cls){ toast('먼저 위쪽에서 우리 반을 골라 주세요'); csel.focus(); return; }
+  if(!mem.length){ toast('조원 이름을 먼저 적어 주세요'); show('s1'); return; }
+  if(p.length<2){ toast('측정값을 2개 이상 입력해 주세요'); show('s1'); return; }
+  var d={cls:S.cls, team:S.team, members:mem.join(', '), rows:rows().filter(function(r){return num(r.v)>0&&num(r.t)>0;}),
+         a:F.a, b:F.b, r2:F.r2, set:S.set, photo:photos[S.team]||''};
+  $('submit').disabled=true; $('subMsg').textContent='제출하는 중입니다…';
+  API.submit(d).then(function(r){
+    if(r&&r.ok===false) throw new Error(r.error||'실패');
+    $('subMsg').innerHTML='<span class="ok">제출했습니다.</span> 고칠 것이 있으면 고친 뒤 다시 제출하면 마지막 제출이 선생님께 보입니다.';
+    toast('제출했습니다');
+  }).catch(function(e){ $('subMsg').innerHTML='<span class="warn">제출하지 못했습니다. 인터넷 연결을 확인하고 다시 눌러 주세요.</span>'; })
+    .then(function(){ $('submit').disabled=false; });
 };
-$('tgtIn').onchange=function(){ var v=num(this.value); if(v){ S.target=v; save(); renderTarget(); renderBoard(); } };
+
+/* ---------- 교사 : 제출 현황 ---------- */
+var subs = {};    // 조 → 마지막 제출
+function loadSubs(){
+  $('lastLoad').textContent='불러오는 중…';
+  return API.list().then(function(r){
+    subs={}; (r.list||[]).forEach(function(it){ if(String(it.cls||'')===S.cls) subs[it.team]=it; });   // 고른 반의 제출만
+    var d=new Date(); $('lastLoad').textContent='마지막 확인 '+d.getHours()+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
+    renderTeacher();
+  }).catch(function(){ $('lastLoad').innerHTML='<span class="warn">제출 내용을 불러오지 못했습니다. ‘설정’ 탭을 확인하세요.</span>'; });
+}
+$('refresh').onclick=loadSubs;
+setInterval(function(){ if(mode==='tea' && (curT==='t1'||curT==='t2')) loadSubs(); }, 20000);
+function subFit(it){ var p=ptsOf(it.rows); return {p:p, F:fit(p)}; }
+function fmtTime(t){ if(!t) return ''; var d=new Date(t); return isNaN(d)?'':d.getHours()+':'+String(d.getMinutes()).padStart(2,'0'); }
+function renderCards(){
+  var box=$('cards'); box.innerHTML='';
+  for(var i=1;i<=TEAMS;i++){
+    var it=subs[i], el=document.createElement('div'); el.className='tcard'+(it?' done':'');
+    el.innerHTML='<h3><span><i class="sw" style="background:'+COLORS[i-1]+'"></i>'+i+'조</span><span class="tag">'+(it?'제출 '+fmtTime(it.time):'미제출')+'</span></h3>'+
+      '<div class="mem">'+(it?esc(it.members):'')+'</div><canvas width="420" height="260"></canvas>'+
+      '<div class="feq">'+(it&&subFit(it).F?esc(eqStr(subFit(it).F))+' · R² '+subFit(it).F.r2.toFixed(3):'')+'</div>';
+    box.appendChild(el);
+    var sf=it?subFit(it):{p:[],F:null};
+    chart(el.querySelector('canvas'),[{p:sf.p,F:sf.F,color:COLORS[i-1]}],null,true);
+    if(it) el.onclick=(function(n){ return function(){ openDetail(n); }; })(i);
+  }
+}
+function openDetail(n){
+  var it=subs[n], sf=subFit(it), F=sf.F;
+  var rowsH=sf.p.map(function(q,i){ return '<tr><td>'+(i+1)+'</td><td>'+q.v+'</td><td>'+sig(q.c)+'</td><td>'+q.t+'</td><td>'+sig(q.r)+'</td></tr>'; }).join('');
+  $('modalIn').innerHTML='<div class="btns" style="margin-top:0;margin-bottom:18px;justify-content:space-between"><h2 style="margin:0;font-size:18px;display:flex;align-items:center;gap:10px"><i class="sw" style="background:'+COLORS[n-1]+';width:11px;height:11px"></i>'+n+'조<span style="font-size:14px;font-weight:500;color:var(--muted)">'+esc(it.members)+'</span></h2><button class="b" id="mClose">닫기</button></div>'+
+    '<div class="cols" style="grid-template-columns:1fr 1fr;gap:24px"><div><canvas id="mCv" width="800" height="520"></canvas>'+
+    '<div class="eq">'+(F?esc(eqStr(F))+'<small>R² = '+F.r2.toFixed(3)+'</small>':'')+'</div>'+
+    '<table class="dt" style="margin-top:12px"><thead><tr><th>홈</th><th>원액 (mL)</th><th>농도 (M)</th><th>시간 (s)</th><th>1/t</th></tr></thead><tbody>'+rowsH+'</tbody></table></div>'+
+    '<div><div id="mPh" class="help">사진을 불러오는 중…</div></div></div>';
+  $('modal').classList.add('on');
+  chart($('mCv'),[{p:sf.p,F:F,color:COLORS[n-1]}]);
+  $('mClose').onclick=function(){ $('modal').classList.remove('on'); };
+  API.photo(it).then(function(src){ $('mPh').innerHTML=src?'<img src="'+src+'" style="max-width:100%;border-radius:10px;border:1px solid #E3E0D8">':'<div class="photo" style="cursor:default;min-height:300px">제출된 사진이 없습니다.</div>'; })
+    .catch(function(){ $('mPh').textContent='사진을 불러오지 못했습니다.'; });
+}
+$('modal').onclick=function(e){ if(e.target===$('modal')) $('modal').classList.remove('on'); };
+function renderAll(){
+  var series=[], leg='', cmp='';
+  for(var i=1;i<=TEAMS;i++){
+    var it=subs[i]; if(!it) continue;
+    var sf=subFit(it); series.push({p:sf.p,F:sf.F,color:COLORS[i-1]});
+    leg+='<span><i style="background:'+COLORS[i-1]+'"></i>'+i+'조</span>';
+    var tg=S.target||60, v60=sf.F?volOf(sf.F.concFor(tg)):null;
+    cmp+='<tr><td><b>'+i+'조</b></td><td>'+(sf.F?esc(eqStr(sf.F)):'–')+'</td><td>'+(sf.F?sf.F.r2.toFixed(3):'–')+'</td><td>'+(v60>0?v60.toFixed(2):'–')+'</td></tr>';
+  }
+  $('cmpH').textContent=(S.target||60)+'초에 필요한 원액 (mL)'; chart($('cvAll'),series); $('legend').innerHTML=leg||'<span class="help">아직 제출한 조가 없습니다.</span>';
+  document.querySelector('#cmp tbody').innerHTML=cmp;
+}
+function renderTeacher(){ renderCards(); renderAll(); }
+
+/* ---------- 교사 : 목표 시간 ---------- */
+function renderTarget(){ $('bigT').innerHTML=(S.target===null?'--':(+S.target).toFixed(S.target%1?1:0))+'<small> 초</small>'; }
+$('setT').onclick=function(){ var v=num($('tgtIn').value); if(v>0){ S.target=v; save(); renderTarget(); renderBoard(); } };
+$('tgtIn').onkeydown=function(e){ if(e.key==='Enter') $('setT').click(); };
+$('rand').onclick=function(){
+  var a=num($('rMin').value)||30,b=num($('rMax').value)||80,k=0;
+  var h=setInterval(function(){ S.target=Math.round(a+Math.random()*(b-a)); renderTarget(); if(++k>=24){ clearInterval(h); save(); renderBoard(); } },60);
+};
+$('full').onclick=function(){ var st=$('stage'); if(st.requestFullscreen) st.requestFullscreen(); };
 function renderBoard(){
   var tb=document.querySelector('#board tbody'); tb.innerHTML=''; var list=[];
   for(var i=1;i<=TEAMS;i++){ var e=S.board[i]||{v:'',t:''}, t=num(e.t); list.push({i:i,v:e.v,t:e.t,err:(t!==null&&S.target!==null)?Math.abs(t-S.target):null}); }
   var ranked=list.filter(function(r){return r.err!==null;}).sort(function(a,b){return a.err-b.err;});
   list.forEach(function(r){
     var k=ranked.indexOf(r)+1, tr=document.createElement('tr'); if(k===1) tr.className='first';
-    tr.innerHTML='<td><b>'+r.i+'조</b></td><td><input data-b="'+r.i+'" data-k="v" type="number" step="0.01" value="'+r.v+'"></td>'+
-      '<td><input data-b="'+r.i+'" data-k="t" type="number" step="0.01" value="'+r.t+'"></td>'+
+    tr.innerHTML='<td><b>'+r.i+'조</b></td><td><input data-b="'+r.i+'" data-k="v" type="number" step="0.01" value="'+esc(r.v)+'"></td>'+
+      '<td><input data-b="'+r.i+'" data-k="t" type="number" step="0.01" value="'+esc(r.t)+'"></td>'+
       '<td class="c">'+(r.err===null?'–':r.err.toFixed(2))+'</td><td><b>'+(k||'')+'</b></td>';
     tb.appendChild(tr);
   });
   [].forEach.call(tb.querySelectorAll('input'),function(el){ el.onchange=function(){ var b=+el.dataset.b; S.board[b]=S.board[b]||{v:'',t:''}; S.board[b][el.dataset.k]=el.value; save(); renderBoard(); }; });
 }
-$('clearBoard').onclick=function(){ if(confirm('기록을 모두 지울까요?')){ S.board={}; save(); renderBoard(); } };
-var w0=0,acc=0,run=false;
+$('clearBoard').onclick=function(){ if(confirm('조별 결과를 지울까요?')){ S.board={}; save(); renderBoard(); } };
+var w0=0,acc=0,run=false,counting=false;
 function now(){ return acc+(run?(performance.now()-w0)/1000:0); }
 function tick(){ var s=now(); $('watch').textContent=(s<10?'0':'')+s.toFixed(2); if(run) requestAnimationFrame(tick); }
 function toggle(){ if(run){ acc=now(); run=false; } else { w0=performance.now(); run=true; } tick(); }
 $('wGo').onclick=toggle;
 $('wReset').onclick=function(){ run=false; acc=0; tick(); };
-$('wSend').onclick=function(){ var s=+now().toFixed(2); if(!s) return; S.board[S.team]=S.board[S.team]||{v:'',t:''}; S.board[S.team].t=s; save(); renderBoard(); toast(S.team+'조 기록: '+s+' 초'); };
-document.addEventListener('keydown',function(e){ if(e.code==='Space'&&$('p3').classList.contains('on')&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); toggle(); } });
+$('wCount').onclick=function(){
+  if(counting) return; counting=true; run=false; acc=0;
+  var seq=['3','2','1','시작!'], i=0, el=$('watch');
+  el.style.color='#F3D26B';
+  (function step(){
+    el.textContent=seq[i];
+    if(i===seq.length-1){ setTimeout(function(){ el.style.color=''; counting=false; w0=performance.now(); run=true; tick(); },350); return; }
+    i++; setTimeout(step,1000);
+  })();
+};
+document.addEventListener('keydown',function(e){ if(e.code==='Space'&&curT==='t3'&&mode==='tea'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); toggle(); } });
 
-function render(){ tsel.value=S.team; renderTable(); renderGraph(); renderTarget(); renderBoard(); }
-render();
+/* ---------- 교사 : 설정 ---------- */
+$('srvSave').onclick=function(){ S.srv=$('srv').value.trim(); save(); renderConn(); toast('저장했습니다'); };
+$('srvTest').onclick=function(){ API.list().then(function(r){ toast(r&&r.ok!==false?'연결되었습니다 (제출 '+((r.list||[]).length)+'건)':'연결하지 못했습니다'); }).catch(function(){ toast('연결하지 못했습니다'); }); };
+$('srvLink').onclick=function(){
+  if(!S.srv){ toast('먼저 웹 앱 주소를 저장하세요'); return; }
+  var u=location.href.split('?')[0]+'?s='+encodeURIComponent(S.srv)+(S.cls?'&c='+encodeURIComponent(S.cls):'');
+  (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(function(){ toast((S.cls?clsName()+' ':'')+'학생용 주소를 복사했습니다'); },function(){ prompt('학생용 주소',u); });
+};
+$('clsList').value=S.classes.join(', ');
+$('clsSave').onclick=function(){
+  var a=$('clsList').value.split(/[,\s]+/).map(function(x){return x.trim().toUpperCase();}).filter(Boolean);
+  if(!a.length){ toast('반 이름을 하나 이상 넣으세요'); return; }
+  S.classes=a; if(S.cls && a.indexOf(S.cls)<0){ S.cls=''; bindCls(); }
+  save(); buildCls(); render(); toast('반 목록을 저장했습니다');
+};
+$('pinSave').onclick=function(){ var v=$('pin').value.trim(); if(!v){ toast('새 비밀번호를 넣으세요'); return; } S.pin=v; save(); $('pin').value=''; toast('비밀번호를 바꿨습니다'); };
+$('localClear').onclick=function(){ if(confirm('이 기기에 저장된 제출 기록을 지울까요?')){ S.local=[]; save(); loadSubs(); } };
+
+/* ---------- 반 선택 ---------- */
+var csel=$('cls');
+function buildCls(){
+  csel.innerHTML='<option value="">반 선택</option>'+S.classes.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'반</option>'; }).join('');
+  csel.value=S.cls;
+}
+csel.onchange=function(){
+  save(); S.cls=csel.value; bindCls(); save(); render();
+  if(mode==='tea') loadSubs();
+};
+buildCls();
+
+function render(){
+  tsel.value=S.team; csel.value=S.cls;
+  csel.classList.toggle('need',!S.cls);
+  $('clsNote').hidden=!!S.cls;
+  [].forEach.call(document.querySelectorAll('.clsT'),function(e){ e.textContent=S.cls?clsName()+' ':''; });
+  if(mode==='stu'){ renderMembers(); renderTable(); renderPhoto(); renderGraph(); renderSummary(); }
+  else { renderTarget(); renderBoard(); renderTeacher(); }
+  renderConn();
+}
+setMode('stu');
+// 글꼴을 다 불러온 뒤 그래프 글자를 다시 그림
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(render);
 })();
 </script>
 </body>
