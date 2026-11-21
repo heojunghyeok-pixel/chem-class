@@ -192,7 +192,7 @@ tr.first td{background:var(--mark)!important;font-weight:700}
       <h2 class="sec">실험 결과</h2>
       <p class="help">원액 부피와 걸린 시간만 넣으면 나머지는 자동으로 계산됩니다.</p>
       <table class="dt" id="tbl">
-        <thead><tr><th>홈</th><th><span class="vn">KIO₃</span> 원액<br>(mL)</th><th>증류수<br>(mL)</th><th>섞은 뒤 농도<br>(M)</th><th>걸린 시간<br>(s)</th><th>반응 속도<br>1/t (s⁻¹)</th><th></th></tr></thead>
+        <thead><tr><th>비커</th><th><span class="vn">KIO₃</span> 원액<br>(mL)</th><th>증류수<br>(mL)</th><th>섞은 뒤 농도<br>(M)</th><th>걸린 시간<br>(s)</th><th>반응 속도<br>1/t (s⁻¹)</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
       <div class="btns">
@@ -363,7 +363,7 @@ tr.first td{background:var(--mark)!important;font-weight:700}
 'use strict';
 var TEAMS = 6, KEY = 'conc-rate-v4';
 var $ = function(id){ return document.getElementById(id); };
-var DEF_V = [0.5, 1.0, 1.5, 2.0, 2.5];
+var DEF_V = [2, 4, 6, 8, 10];
 var COLORS = ['#D0533A','#2F5EA8','#2E8A5E','#C68A14','#7D4FA6','#14808A'];
 var MINE = '#24533F', PICK = '#CF5530';
 var CF = '"Pretendard Variable",Pretendard,"Malgun Gothic",sans-serif';
@@ -371,7 +371,11 @@ function blank(){ return DEF_V.map(function(v){ return {v:v, t:''}; }); }
 var S = (function(){
   var d = null; try{ d = JSON.parse(localStorage.getItem(KEY)); }catch(e){}
   d = d || {};
-  d.set = d.set || {name:'KIO₃', c0:0.05, vd:2.5, vm:5};
+  d.set = d.set || {name:'KIO₃', c0:0.05, vd:10, vm:20};
+  // 12홈판(2.5 mL + 2.5 mL) → 50 mL 비커(10 mL + 10 mL)로 바뀜 : 예전 설정이 남아 있으면 한 번만 바꿔 줌
+  if(d.set.vd===2.5 && d.set.vm===5 && !d.beakerV){ d.set.vd=10; d.set.vm=20;
+    Object.keys(d.teams||{}).forEach(function(k){ (d.teams[k].rows||[]).forEach(function(r){ if(typeof r.v==='number' && r.v<=2.5) r.v=Math.round(r.v*4*10)/10; }); });
+    d.beakerV=1; }
   d.teams = d.teams || {};
   for(var i=1;i<=TEAMS;i++){ if(!d.teams[i]) d.teams[i] = {rows: blank(), members:['','','','','']}; if(!d.teams[i].members) d.teams[i].members=['','','','','']; }
   d.team = d.team || 1; d.board = d.board || {}; d.target = d.target || null;
@@ -509,7 +513,7 @@ function renderTable(){
   [].forEach.call(document.querySelectorAll('.vn'),function(e){ e.textContent=S.set.name; });
 }
 $('addRow').onclick=function(){ rows().push({v:'',t:''}); save(); renderTable(); };
-$('sample').onclick=function(){ team().rows=[{v:0.5,t:86.0},{v:1.0,t:44.0},{v:1.5,t:29.5},{v:2.0,t:22.3},{v:2.5,t:17.8}]; save(); renderTable(); };
+$('sample').onclick=function(){ team().rows=[{v:2,t:86.0},{v:4,t:44.0},{v:6,t:29.5},{v:8,t:22.3},{v:10,t:17.8}]; save(); renderTable(); };
 $('clear').onclick=function(){ if(confirm(S.team+'조 값을 지울까요?')){ team().rows=blank(); save(); renderTable(); } };
 $('toGraph').onclick=function(){ show('s2'); };
 
@@ -689,7 +693,7 @@ function openDetail(n){
   $('modalIn').innerHTML='<div class="btns" style="margin-top:0;margin-bottom:18px;justify-content:space-between"><h2 style="margin:0;font-size:18px;display:flex;align-items:center;gap:10px"><i class="sw" style="background:'+COLORS[n-1]+';width:11px;height:11px"></i>'+n+'조<span style="font-size:14px;font-weight:500;color:var(--muted)">'+esc(it.members)+'</span></h2><button class="b" id="mClose">닫기</button></div>'+
     '<div class="cols" style="grid-template-columns:1fr 1fr;gap:24px"><div><canvas id="mCv" width="800" height="520"></canvas>'+
     '<div class="eq">'+(F?esc(eqStr(F))+'<small>R² = '+F.r2.toFixed(3)+'</small>':'')+'</div>'+
-    '<table class="dt" style="margin-top:12px"><thead><tr><th>홈</th><th>원액 (mL)</th><th>농도 (M)</th><th>시간 (s)</th><th>1/t</th></tr></thead><tbody>'+rowsH+'</tbody></table></div>'+
+    '<table class="dt" style="margin-top:12px"><thead><tr><th>비커</th><th>원액 (mL)</th><th>농도 (M)</th><th>시간 (s)</th><th>1/t</th></tr></thead><tbody>'+rowsH+'</tbody></table></div>'+
     '<div><div id="mPh" class="help">사진을 불러오는 중…</div></div></div>';
   $('modal').classList.add('on');
   chart($('mCv'),[{p:sf.p,F:F,color:COLORS[n-1]}]);
