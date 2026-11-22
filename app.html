@@ -384,6 +384,13 @@ var S = (function(){
   // 반 : 조원·측정값·목표 시간 결과를 반마다 따로 저장 (다음 반이 같은 기기를 써도 섞이지 않음)
   d.classes = d.classes || ['G','H','I','J']; d.cls = d.cls || '';
   d.byCls = d.byCls || {};
+  // 반마다 저장된 예전 12홈판 부피(0.5~2.5 mL)도 비커 부피(2~10 mL)로 한 번만 바꿔 줌
+  if(!d.beakerV2){
+    var fix=function(teams){ Object.keys(teams||{}).forEach(function(k){ var rs=(teams[k]&&teams[k].rows)||[];
+      var vs=rs.map(function(r){ return parseFloat(r.v); }).filter(function(v){ return !isNaN(v); });
+      if(vs.length && Math.max.apply(null,vs)<=2.5){ rs.forEach(function(r){ var v=parseFloat(r.v); if(!isNaN(v)) r.v=Math.round(v*4*10)/10; r.w=''; }); } }); };
+    fix(d.teams); Object.keys(d.byCls).forEach(function(c){ fix(d.byCls[c]&&d.byCls[c].teams); });
+    d.beakerV2=1; }
   return d;
 })();
 function bindCls(){
