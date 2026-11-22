@@ -163,6 +163,7 @@ canvas{width:100%;background:#fff;border:1px solid var(--line);border-radius:10p
 tr.first td{background:var(--mark)!important;font-weight:700}
 .toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,8px);background:#1D2320;color:#fff;padding:11px 18px;border-radius:9px;font-size:14px;font-weight:600;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 .toast.on{opacity:1;transform:translate(-50%,0)}
+input.auto{color:#8C887C}
 </style>
 </head>
 <body>
@@ -190,7 +191,7 @@ tr.first td{background:var(--mark)!important;font-weight:700}
       <h2>조원 이름</h2>
       <div class="members" id="members"></div>
       <h2 class="sec">실험 결과</h2>
-      <p class="help">원액 부피와 걸린 시간만 넣으면 나머지는 자동으로 계산됩니다.</p>
+      <p class="help">원액 부피와 걸린 시간을 넣으면 나머지는 자동으로 계산됩니다. 증류수는 자동(10 − 원액)으로 채워지며, 실제로 넣은 양이 다르면 고쳐 쓰세요.</p>
       <table class="dt" id="tbl">
         <thead><tr><th>비커</th><th><span class="vn">KIO₃</span> 원액<br>(mL)</th><th>증류수<br>(mL)</th><th>섞은 뒤 농도<br>(M)</th><th>걸린 시간<br>(s)</th><th>반응 속도<br>1/t (s⁻¹)</th><th></th></tr></thead>
         <tbody></tbody>
@@ -373,7 +374,7 @@ var S = (function(){
   d = d || {};
   d.set = d.set || {name:'KIO₃', c0:0.05, vd:10, vm:20};
   // 12홈판(2.5 mL + 2.5 mL) → 50 mL 비커(10 mL + 10 mL)로 바뀜 : 예전 설정이 남아 있으면 한 번만 바꿔 줌
-  if(d.set.vd===2.5 && d.set.vm===5 && !d.beakerV){ d.set.vd=10; d.set.vm=20;
+  if(!d.beakerV && (d.set.vd<10 || d.set.vm<20)){ d.set.vd=10; d.set.vm=20;
     Object.keys(d.teams||{}).forEach(function(k){ (d.teams[k].rows||[]).forEach(function(r){ if(typeof r.v==='number' && r.v<=2.5) r.v=Math.round(r.v*4*10)/10; }); });
     d.beakerV=1; }
   d.teams = d.teams || {};
@@ -407,6 +408,8 @@ function num(x){ var n=parseFloat(String(x).replace(',','.')); return isFinite(n
 function sig(x){ if(x===null||x===undefined||!isFinite(x)) return '–'; var a=Math.abs(x); if(a>=100) return x.toFixed(1); if(a>=1) return x.toFixed(2); return x.toPrecision(3); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function conc(v){ return S.set.c0*v/S.set.vm; }
+function waterOf(r){ var w=num(r.w), v=num(r.v); return (w!==null && r.w!=='') ? w : (v===null?null:Math.max(0,S.set.vd-v)); }
+function concRow(r){ var v=num(r.v), w=waterOf(r); if(v===null||w===null) return null; var tot=v+w+(S.set.vm-S.set.vd); return tot>0 ? S.set.c0*v/tot : null; }
 function volOf(c){ return c*S.set.vm/S.set.c0; }
 
 /* ---------- 저장 위치 (구글 Apps Script / 주소 / 이 기기) ---------- */
@@ -494,21 +497,23 @@ function renderMembers(){
 
 /* ---------- 학생 : 표 ---------- */
 function rows(){ return team().rows; }
-function ptsOf(rs){ var p=[]; (rs||[]).forEach(function(r){ var v=num(r.v),t=num(r.t); if(v>0&&t>0) p.push({v:v,c:conc(v),t:t,r:1/t}); }); return p; }
+function ptsOf(rs){ var p=[]; (rs||[]).forEach(function(r){ var v=num(r.v),t=num(r.t),c=concRow(r); if(v>0&&t>0&&c) p.push({v:v,c:c,t:t,r:1/t}); }); return p; }
 function renderTable(){
   var tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
   rows().forEach(function(r,i){
     var v=num(r.v),t=num(r.t),tr=document.createElement('tr');
     tr.innerHTML='<td><b>'+(i+1)+'</b></td>'+
       '<td><input data-i="'+i+'" data-k="v" type="number" step="0.1" inputmode="decimal" value="'+esc(r.v)+'"></td>'+
-      '<td class="c">'+(v===null?'–':(S.set.vd-v).toFixed(1))+'</td>'+
-      '<td class="c">'+(v===null?'–':sig(conc(v)))+'</td>'+
+      '<td><input data-i="'+i+'" data-k="w" type="number" step="0.1" inputmode="decimal" class="'+((r.w!==undefined&&r.w!=='')?'':'auto')+'" value="'+esc((r.w!==undefined&&r.w!=='')?r.w:(v===null?'':Math.max(0,S.set.vd-v)))+'" title="자동 : '+S.set.vd+' − 원액. 실제로 넣은 양이 다르면 고쳐 쓰세요"></td>'+
+      '<td class="c">'+(concRow(r)===null?'–':sig(concRow(r)))+'</td>'+
       '<td><input data-i="'+i+'" data-k="t" type="number" step="0.1" inputmode="decimal" value="'+esc(r.t)+'"></td>'+
       '<td class="c">'+(t?sig(1/t):'–')+'</td>'+
       '<td><button class="del" data-d="'+i+'" title="줄 지우기">✕</button></td>';
     tb.appendChild(tr);
   });
-  [].forEach.call(tb.querySelectorAll('input'),function(el){ el.onchange=function(){ rows()[+el.dataset.i][el.dataset.k]=el.value; save(); renderTable(); }; });
+  [].forEach.call(tb.querySelectorAll('input'),function(el){ el.onchange=function(){ var r=rows()[+el.dataset.i]; r[el.dataset.k]=el.value;
+    if(el.dataset.k==='w' && num(r.v)!==null && num(el.value)===Math.max(0,S.set.vd-num(r.v))) r.w='';   // 자동 값과 같으면 자동으로 되돌림
+    save(); renderTable(); }; });
   [].forEach.call(tb.querySelectorAll('[data-d]'),function(b){ b.onclick=function(){ rows().splice(+b.dataset.d,1); save(); renderTable(); }; });
   [].forEach.call(document.querySelectorAll('.vn'),function(e){ e.textContent=S.set.name; });
 }
