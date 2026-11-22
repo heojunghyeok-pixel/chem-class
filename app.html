@@ -164,6 +164,11 @@ tr.first td{background:var(--mark)!important;font-weight:700}
 .toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,8px);background:#1D2320;color:#fff;padding:11px 18px;border-radius:9px;font-size:14px;font-weight:600;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 input.auto{color:#8C887C}
+.stage.hit{animation:hitflash .55s ease-in-out 3}
+@keyframes hitflash{0%,100%{box-shadow:inset 0 0 0 0 rgba(200,70,42,0)}50%{box-shadow:inset 0 0 0 2000px rgba(200,70,42,.55)}}
+.stage .over{font-weight:700;font-size:clamp(20px,2.4vw,34px);color:#F3D26B;min-height:1.3em;margin-top:12px}
+.stage:fullscreen .over{font-size:min(5vh,4.5vw)}
+.sndl{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -300,6 +305,7 @@ input.auto{color:#8C887C}
     <div class="lab"><span class="clsT"></span>목표 시간</div>
     <div class="big" id="bigT">--<small> 초</small></div>
     <div class="watch" id="watch">00.00</div>
+    <div class="over" id="over"></div>
   </div>
   <div class="btns" style="justify-content:center;margin-top:20px;gap:10px">
     <input class="bigin" id="tgtIn" type="number" step="1" placeholder="초">
@@ -312,6 +318,7 @@ input.auto{color:#8C887C}
     <button class="b main" id="wGo" style="font-size:15px;padding:12px 24px">시작 / 멈춤</button>
     <button class="b" id="wReset" style="padding:12px 16px">처음으로</button>
     <button class="b" id="full" style="padding:12px 16px">큰 화면으로</button>
+    <label class="sndl"><input type="checkbox" id="snd" checked> 목표 시간에 소리 알림</label>
   </div>
   <div class="box" style="max-width:820px;margin:20px auto 0">
     <h2>조별 결과</h2>
@@ -729,7 +736,7 @@ function renderAll(){
 function renderTeacher(){ renderCards(); renderAll(); }
 
 /* ---------- 교사 : 목표 시간 ---------- */
-function renderTarget(){ $('bigT').innerHTML=(S.target===null?'--':(+S.target).toFixed(S.target%1?1:0))+'<small> 초</small>'; }
+function renderTarget(){ hit=false; $('bigT').innerHTML=(S.target===null?'--':(+S.target).toFixed(S.target%1?1:0))+'<small> 초</small>'; }
 $('setT').onclick=function(){ var v=num($('tgtIn').value); if(v>0){ S.target=v; save(); renderTarget(); renderBoard(); } };
 $('tgtIn').onkeydown=function(e){ if(e.key==='Enter') $('setT').click(); };
 $('rand').onclick=function(){
@@ -753,16 +760,27 @@ function renderBoard(){
 $('clearBoard').onclick=function(){ if(confirm('조별 결과를 지울까요?')){ S.board={}; save(); renderBoard(); } };
 var w0=0,acc=0,run=false,counting=false;
 function now(){ return acc+(run?(performance.now()-w0)/1000:0); }
-function tick(){ var s=now(); $('watch').textContent=(s<10?'0':'')+s.toFixed(2); if(run) requestAnimationFrame(tick); }
-function toggle(){ if(run){ acc=now(); run=false; } else { w0=performance.now(); run=true; } tick(); }
+var hit=false, actx=null;
+function ac(){ if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(actx&&actx.state==='suspended') actx.resume(); return actx; }
+function beep(f,d,dl){ var a=ac(); if(!a) return; var o=a.createOscillator(), g=a.createGain(), t=a.currentTime+(dl||0);
+  o.type='sine'; o.frequency.value=f; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.6,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+d+0.05); }
+function alarm(){ var st=$('stage'); st.classList.remove('hit'); void st.offsetWidth; st.classList.add('hit');
+  if($('snd') && $('snd').checked){ [0,0.32,0.64].forEach(function(dl){ beep(880,0.24,dl); }); beep(1320,0.9,0.98); } }
+function tick(){ var s=now(), T=S.target; $('watch').textContent=(s<10?'0':'')+s.toFixed(2);
+  if(T && run && !hit && s>=T){ hit=true; alarm(); }
+  var over=(T && hit && s>=T); if(!counting) $('watch').style.color=over?'#F3D26B':'';
+  $('over').textContent= over ? '목표 시간 도착! +'+(s-T).toFixed(1)+' s' : '';
+  if(run) requestAnimationFrame(tick); }
+function toggle(){ ac(); if(run){ acc=now(); run=false; } else { w0=performance.now(); run=true; } tick(); }
 $('wGo').onclick=toggle;
-$('wReset').onclick=function(){ run=false; acc=0; tick(); };
+$('wReset').onclick=function(){ run=false; acc=0; hit=false; $('stage').classList.remove('hit'); tick(); };
 $('wCount').onclick=function(){
-  if(counting) return; counting=true; run=false; acc=0;
+  if(counting) return; ac(); counting=true; run=false; acc=0; hit=false; $('stage').classList.remove('hit'); $('over').textContent='';
   var seq=['3','2','1','시작!'], i=0, el=$('watch');
   el.style.color='#F3D26B';
   (function step(){
-    el.textContent=seq[i];
+    el.textContent=seq[i]; if($('snd').checked) beep(i===seq.length-1?990:660, i===seq.length-1?0.35:0.15);
     if(i===seq.length-1){ setTimeout(function(){ el.style.color=''; counting=false; w0=performance.now(); run=true; tick(); },350); return; }
     i++; setTimeout(step,1000);
   })();
