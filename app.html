@@ -370,6 +370,7 @@ input.auto{color:#8C887C}
 (function(){
 'use strict';
 var TEAMS = 6, KEY = 'conc-rate-v4';
+var DEF_SRV = 'https://script.google.com/macros/s/AKfycbwCCVsx4t2-A3Po_zlGIlsSelhu3cYZu7krTvUF7W-1Zg9dAkrlWYQ9RsiOut3ATzOw/exec';   // 선생님 구글 시트 (기본 저장 위치)
 var $ = function(id){ return document.getElementById(id); };
 var DEF_V = [2, 4, 6, 8, 10];
 var COLORS = ['#D0533A','#2F5EA8','#2E8A5E','#C68A14','#7D4FA6','#14808A'];
@@ -387,7 +388,7 @@ var S = (function(){
   d.teams = d.teams || {};
   for(var i=1;i<=TEAMS;i++){ if(!d.teams[i]) d.teams[i] = {rows: blank(), members:['','','','','']}; if(!d.teams[i].members) d.teams[i].members=['','','','','']; }
   d.team = d.team || 1; d.board = d.board || {}; d.target = d.target || null;
-  d.srv = d.srv || ''; d.pin = d.pin || '1234'; d.local = d.local || [];
+  d.srv = d.srv || DEF_SRV; d.pin = d.pin || '1234'; d.local = d.local || [];
   // 반 : 조원·측정값·목표 시간 결과를 반마다 따로 저장 (다음 반이 같은 기기를 써도 섞이지 않음)
   d.classes = d.classes || ['G','H','I','J']; d.cls = d.cls || '';
   d.byCls = d.byCls || {};
